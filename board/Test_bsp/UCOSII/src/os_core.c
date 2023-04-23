@@ -79,6 +79,10 @@ static  void  OS_InitTCBList(void);
 
 static  void  OS_SchedNew(void);
 
+#if OS_SCHE_EDF == 1
+    static  INT8U OS_GetHighPrioTask(void);
+#endif
+
 /*$PAGE*/
 /*
 *********************************************************************************************************
@@ -665,7 +669,12 @@ void  OSIntExit (void)
         }
         if (OSIntNesting == 0) {                           /* Reschedule only if all ISRs complete ... */
             if (OSLockNesting == 0) {                      /* ... and not locked.                      */
-                OS_SchedNew();
+                #if OS_SCHE_EDF != 1
+                    OSIntExitY    = OSUnMapTbl[OSRdyGrp];          /* ... and not locked.                      */
+                    OSPrioHighRdy = (INT8U)((OSIntExitY << 3) + OSUnMapTbl[OSRdyTbl[OSIntExitY]]);
+                #else
+                    OSPrioHighRdy = OS_GetHighPrioTask();
+                #endif
                 if (OSPrioHighRdy != OSPrioCur) {          /* No Ctx Sw if current task is highest rdy */
                     OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy];
 
@@ -797,7 +806,11 @@ void  OSStart (void)
         OSTASKDmp.queue_head = 0;
         OSTASKDmp.queue_tail = 0;
         OSTASKDmp.full       = 0;
-        OS_SchedNew();                               /* Find highest priority's task priority number   */
+        #if OS_SCHE_EDF != 1
+            OS_SchedNew();                               /* Find highest priority's task priority number   */
+        #else
+            OSPrioHighRdy = 0;
+        #endif
         OSPrioCur     = OSPrioHighRdy;
         OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy]; /* Point to highest priority task ready to run    */
         OSTCBCur      = OSTCBHighRdy;
@@ -1633,7 +1646,11 @@ void  OS_Sched (void)
     OS_ENTER_CRITICAL();
     if (OSIntNesting == 0) {                           /* Schedule only if all ISRs done and ...       */
         if (OSLockNesting == 0) {                      /* ... scheduler is not locked                  */
-            OS_SchedNew();
+            #if OS_SCHE_EDF != 1
+                OS_SchedNew();
+            #else
+                OSPrioHighRdy = OS_GetHighPrioTask();
+            #endif
             if (OSPrioHighRdy != OSPrioCur) {          /* No Ctx Sw if current task is highest rdy     */
                 OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
 
@@ -2044,3 +2061,23 @@ INT8U  OS_TCBInit (INT8U prio, OS_STK *ptos, OS_STK *pbos, INT16U id, INT32U stk
     OS_EXIT_CRITICAL();
     return (OS_ERR_TASK_NO_MORE_TCB);
 }
+
+#if OS_SCHE_EDF == 1
+    static INT8U OS_GetHighPrioTask(void){
+        OS_TCB       *ptcb;
+        INT8U        cur_prio;
+        INT16U       cur_deadline;
+        ptcb         = OSTCBList;
+        cur_prio     = ptcb->OSTCBPrio; 
+        cur_deadline = ptcb->deadline; 
+
+        while(ptcb->OSTCBPrio != OS_IDLE_PRIO) {               /* Go through all TCBs in TCB list          */
+                if (ptcb->OSTCBDly == 0 && ptcb->deadline < cur_deadline) {           /* Delayed or waiting for event with TO     */
+                    cur_prio = ptcb->OSTCBPrio;
+                    cur_deadline = ptcb->deadline;
+                }
+                ptcb = ptcb->OSTCBNext;                        /* Point at next TCB in TCB list            */
+        }
+        return cur_prio;
+    }
+#endif

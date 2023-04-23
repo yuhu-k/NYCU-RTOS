@@ -658,6 +658,9 @@ typedef struct os_tcb {
 #endif
     INT32U          compTime;
     INT32U          period;
+#if OS_SCHE_EDF == 1
+    INT16U         deadline;
+#endif
 } OS_TCB;
 
 /*$PAGE*/

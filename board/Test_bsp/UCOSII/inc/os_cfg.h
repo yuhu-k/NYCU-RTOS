@@ -55,6 +55,7 @@ extern "C"
                                        /* ------------------------ SEMAPHORES ------------------------ */
 #define OS_SEM_PEND_ABORT_EN      1    /*    Include code for OSSemPendAbort()                         */
 
+#define OS_SCHE_EDF               1
                                                                                                                      
 #include "system.h"
 
