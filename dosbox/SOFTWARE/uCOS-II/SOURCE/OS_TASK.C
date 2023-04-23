@@ -180,9 +180,11 @@ INT8U  OSTaskCreate (void (*task)(void *pd), void *pdata, OS_STK *ptos, INT8U pr
             OS_ENTER_CRITICAL();
             OSTaskCtr++;                                        /* Increment the #tasks counter        */
             OS_EXIT_CRITICAL();
-            if (OSRunning == TRUE) {         /* Find highest priority task if multitasking has started */
-                OS_Sched();
-            }
+            #if OS_SCHE_EDF != 1
+                if (OSRunning == TRUE) {         /* Find highest priority task if multitasking has started */
+                    OS_Sched();
+                }
+            #endif
         } else {
             OS_ENTER_CRITICAL();
             OSTCBPrioTbl[prio] = (OS_TCB *)0;/* Make this priority available to others                 */
@@ -303,9 +305,11 @@ INT8U  OSTaskCreateExt (void   (*task)(void *pd),
             OS_ENTER_CRITICAL();
             OSTaskCtr++;                                       /* Increment the #tasks counter         */
             OS_EXIT_CRITICAL();
-            if (OSRunning == TRUE) {                           /* Find HPT if multitasking has started */
-                OS_Sched();
-            }
+            #if OS_SCHE_EDF != 1
+                if (OSRunning == TRUE) {                           /* Find HPT if multitasking has started */
+                    OS_Sched();
+                }
+            #endif
         } else {
             OS_ENTER_CRITICAL();
             OSTCBPrioTbl[prio] = (OS_TCB *)0;                  /* Make this priority avail. to others  */

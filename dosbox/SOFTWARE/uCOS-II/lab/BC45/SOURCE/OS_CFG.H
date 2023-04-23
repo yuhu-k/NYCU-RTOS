@@ -111,3 +111,6 @@
 
 
 typedef INT16U             OS_FLAGS;   /* Date type for event flag bits (8, 16 or 32 bits)             */
+
+
+#define OS_SCHE_EDF               1

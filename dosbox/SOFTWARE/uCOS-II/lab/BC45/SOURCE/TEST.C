@@ -23,16 +23,14 @@
 #define          TASK_STK_SIZE     512                /* Size of each task's stacks (# of WORDs)       */
 
 #define          TASK_START_ID       0                /* Application tasks                             */
-#define          TASK_CLK_ID         1
-#define          TASK_1_ID           2
-#define          TASK_2_ID           3
-#define          TASK_3_ID           4
+#define          TASK_1_ID           1
+#define          TASK_2_ID           2
+#define          TASK_3_ID           3
 
-#define          TASK_START_PRIO    10                /* Application tasks priorities                  */
-#define          TASK_CLK_PRIO      11
-#define          TASK_1_PRIO        12
-#define          TASK_2_PRIO        13
-#define          TASK_3_PRIO        14
+#define          TASK_START_PRIO     0                /* Application tasks priorities                  */
+#define          TASK_1_PRIO         1
+#define          TASK_2_PRIO         2
+#define          TASK_3_PRIO         3
 
 #define          MSG_QUEUE_SIZE     20                /* Size of message queue used in example         */
 
@@ -69,8 +67,10 @@ TASK_USER_DATA  TaskUserData[7];
 
 #if example == 0
     #define UserProcessNum  2
+    int     testcase[UserProcessNum][2] = {{1,3},{3,5}};
 #elif example == 1
     #define UserProcessNum  3
+    int     testcase[UserProcessNum][2] = {{1,4},{2,5},{2,10}};
 #endif
 
 static TASK_PARAMETER_DATA  TaskPdata[UserProcessNum];       /* The number of user's process for lab 1*/
@@ -116,6 +116,9 @@ void  main (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_START_ID],
                     0);  
+    OSTimeSet(0);
+    OSTCBPrioTbl[TASK_START_PRIO]->deadline = OSTimeGet() + 10;
+
     OSStart();                                             /* Start multitasking                       */
 }
 
@@ -132,7 +135,9 @@ void  TaskStart (void *pdata)
 #if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
     OS_CPU_SR  cpu_sr;
 #endif
-    INT16S     key;
+          INT16S     key;
+    const INT16U     period = 10;
+
 
 
     pdata = pdata;                                         /* Prevent compiler warning                 */
@@ -140,11 +145,12 @@ void  TaskStart (void *pdata)
 
     OS_ENTER_CRITICAL();                                   /* Install uC/OS-II's clock tick ISR        */
     PC_VectSet(0x08, OSTickISR);
-    PC_SetTickRate(OS_TICKS_PER_SEC);                                     /* Reprogram tick rate                      */
+    PC_SetTickRate(OS_TICKS_PER_SEC);                      /* Reprogram tick rate                      */
     OS_EXIT_CRITICAL();
 
     TaskStartCreateTasks();
 
+    
     for (;;) {
 //
         if (PC_GetKey(&key)) {                             /* See if key has been pressed              */
@@ -152,7 +158,6 @@ void  TaskStart (void *pdata)
                 PC_DOSReturn();                            /* Yes, return to DOS                       */
             }
         }
-
         OS_ENTER_CRITICAL();
         while(OSTASKDmp.queue_tail != OSTASKDmp.queue_head || OSTASKDmp.full == 1){
             OS_EXIT_CRITICAL();
@@ -161,10 +166,11 @@ void  TaskStart (void *pdata)
             OSTASKDmp.queue_head = (OSTASKDmp.queue_head+1) % 32;
             OSTASKDmp.full = 0;
         }
+        OSTCBCur->deadline = OSTCBCur->deadline + OSTCBCur->period;
         OS_EXIT_CRITICAL();
 
         OSCtxSwCtr = 0;                                    /* Clear the context switch counter         */
-        OSTimeDly(10);
+        OSTimeDly(period);
     }
 }
 /*$PAGE*/
@@ -176,6 +182,7 @@ void  TaskStart (void *pdata)
 
 void  TaskStartCreateTasks (void)
 {
+    INT16U      now = OSTimeGet();
 #if example == 0
     strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1(1,3)");
     TaskPdata[0].exeTime = 1;
@@ -189,9 +196,10 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_1_ID],
                     0);
-    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2(3,6)");
+    OSTCBPrioTbl[TASK_1_PRIO]->deadline = now + TaskPdata[0].period;
+    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2(3,5)");
     TaskPdata[1].exeTime = 3;
-    TaskPdata[1].period = 6;
+    TaskPdata[1].period = 5;
     OSTaskCreateExt(Task1,
                     (void *)(&TaskPdata[1]),
                     &Task2Stk[TASK_STK_SIZE - 1],
@@ -201,10 +209,10 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_2_ID],
                     0);
-
+    OSTCBPrioTbl[TASK_2_PRIO]->deadline = now + TaskPdata[1].period;
     
 #elif example == 1
-    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task1(1,3)");
+    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task1(1,4)");
     OSTaskCreateExt(Task5,
                     (void *)0,
                     &Task5Stk[TASK_STK_SIZE - 1],
@@ -214,7 +222,7 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_5_ID],
                     0);
-    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task2(3,6)");
+    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task2(2,5)");
     OSTaskCreateExt(Task5,
                     (void *)0,
                     &Task5Stk[TASK_STK_SIZE - 1],
@@ -224,7 +232,7 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_5_ID],
                     0);
-    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task3(4,9)");
+    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task3(2,10)");
     OSTaskCreateExt(Task5,
                     (void *)0,
                     &Task5Stk[TASK_STK_SIZE - 1],
@@ -254,6 +262,7 @@ void  Task1 (void *pdata)
     INT16U start;
     INT16U end;
     INT16U toDelay;
+    INT16S     key;
 
     INT16U c = argv->exeTime;
     OS_ENTER_CRITICAL();
@@ -265,12 +274,24 @@ void  Task1 (void *pdata)
 
     while (1)
     {
-        while(OSTCBCur->compTime > 0);
+        while(OSTCBCur->compTime > 0)
+            if (PC_GetKey(&key)) {                             /* See if key has been pressed              */
+                if (key == 0x1B) {                             /* Yes, see if it's the ESCAPE key          */
+                    PC_DOSReturn();                            /* Yes, return to DOS                       */
+                }
+            }
+        
         end = OSTimeGet();
         toDelay = OSTCBCur->period - (end - start);
         start = start + OSTCBCur->period;
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = c;
+        //if(OSTASKDmp.full == 0 || OSTASKDmp.queue_head != OSTASKDmp.queue_tail){
+        //    sprintf(OSTASKDmp.queue[OSTASKDmp.queue_tail],"%5d Preempt   %5d %5d\n",time, OSPrioCur, OSPrioHighRdy);
+        //    OSTASKDmp.queue_tail = (OSTASKDmp.queue_tail+1) % 32;
+        //    OSTASKDmp.full = 1;
+        //}
+        OSTCBCur->deadline = start + OSTCBCur->period;
         OS_EXIT_CRITICAL();
         OSTimeDly(toDelay);
     }

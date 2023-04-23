@@ -69,6 +69,10 @@ static  void  OS_InitTaskIdle(void);
 static  void  OS_InitTaskStat(void);
 static  void  OS_InitTCBList(void);
 
+#if OS_SCHE_EDF == 1
+    static  INT8U OS_GetHighPrioTask(void);
+#endif
+
 /*$PAGE*/
 /*
 *********************************************************************************************************
@@ -185,11 +189,14 @@ void  OSIntExit (void)
             OSIntNesting--;
         }
         if ((OSIntNesting == 0) && (OSLockNesting == 0)) { /* Reschedule only if all ISRs complete ... */
-            OSIntExitY    = OSUnMapTbl[OSRdyGrp];          /* ... and not locked.                      */
-            OSPrioHighRdy = (INT8U)((OSIntExitY << 3) + OSUnMapTbl[OSRdyTbl[OSIntExitY]]);
+            #if OS_SCHE_EDF != 1
+                OSIntExitY    = OSUnMapTbl[OSRdyGrp];          /* ... and not locked.                      */
+                OSPrioHighRdy = (INT8U)((OSIntExitY << 3) + OSUnMapTbl[OSRdyTbl[OSIntExitY]]);
+            #else
+                OSPrioHighRdy = OS_GetHighPrioTask();
+            #endif
             if (OSPrioHighRdy != OSPrioCur) {              /* No Ctx Sw if current task is highest rdy */
                 OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy];
-
                 if(OSTASKDmp.full == 0 || OSTASKDmp.queue_head != OSTASKDmp.queue_tail){
                     sprintf(OSTASKDmp.queue[OSTASKDmp.queue_tail],"%5d Preempt   %5d %5d\n",time, OSPrioCur, OSPrioHighRdy);
                     OSTASKDmp.queue_tail = (OSTASKDmp.queue_tail+1) % 32;
@@ -309,9 +316,13 @@ void  OSStart (void)
         OSTASKDmp.queue_head = 0;
         OSTASKDmp.queue_tail = 0;
         OSTASKDmp.full       = 0;
-        y             = OSUnMapTbl[OSRdyGrp];        /* Find highest priority's task priority number   */
-        x             = OSUnMapTbl[OSRdyTbl[y]];
-        OSPrioHighRdy = (INT8U)((y << 3) + x);
+        #if OS_SCHE_EDF != 1
+            y             = OSUnMapTbl[OSRdyGrp];        /* Find highest priority's task priority number   */
+            x             = OSUnMapTbl[OSRdyTbl[y]];
+            OSPrioHighRdy = (INT8U)((y << 3) + x);
+        #else
+            OSPrioHighRdy = 0;
+        #endif
         OSPrioCur     = OSPrioHighRdy;
         OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy]; /* Point to highest priority task ready to run    */
         OSTCBCur      = OSTCBHighRdy;
@@ -900,17 +911,19 @@ void  OS_Sched (void)
     
     OS_ENTER_CRITICAL();/* OSIntNesting == 0 在中段服务程序中不允许进行任务调度 */
     if ((OSIntNesting == 0) && (OSLockNesting == 0)) { /* Sched. only if all ISRs done & not locked    *//* 未处在中段服务程序中或调度器未被上锁 */
-        y             = OSUnMapTbl[OSRdyGrp];          /* Get pointer to HPT ready to run              */
-        OSPrioHighRdy = (INT8U)((y << 3) + OSUnMapTbl[OSRdyTbl[y]]);          /*    得到最高优先任务   */
+        #if OS_SCHE_EDF != 1
+            y             = OSUnMapTbl[OSRdyGrp];          /* Get pointer to HPT ready to run              */
+            OSPrioHighRdy = (INT8U)((y << 3) + OSUnMapTbl[OSRdyTbl[y]]);          /*    得到最高优先任务   */
+        #else
+            OSPrioHighRdy = OS_GetHighPrioTask();
+        #endif
         if (OSPrioHighRdy != OSPrioCur) {              /* No Ctx Sw if current task is highest rdy     */
             OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];/* 得到任务控制块指针                           */
-
             if(OSTASKDmp.full == 0 || OSTASKDmp.queue_head != OSTASKDmp.queue_tail){
                 sprintf(OSTASKDmp.queue[OSTASKDmp.queue_tail],"%5d Completed %5d %5d\n",time, OSPrioCur, OSPrioHighRdy);
                 OSTASKDmp.queue_tail = (OSTASKDmp.queue_tail+1) % 32;
                 OSTASKDmp.full = 1;
             }
-
             OSCtxSwCtr++;                              /* Increment context switch counter             *//* 统计任务切换次数的计数器加1 */
             OS_TASK_SW();                              /* Perform a context switch                     */
         }
@@ -1138,3 +1151,23 @@ INT8U  OS_TCBInit (INT8U prio, OS_STK *ptos, OS_STK *pbos, INT16U id, INT32U stk
     OS_EXIT_CRITICAL();
     return (OS_NO_MORE_TCB);
 }
+
+#if OS_SCHE_EDF == 1
+    static INT8U OS_GetHighPrioTask(void){
+        OS_TCB       *ptcb;
+        INT8U        cur_prio;
+        INT16U       cur_deadline;
+        ptcb         = OSTCBList;
+        cur_prio     = ptcb->OSTCBPrio; 
+        cur_deadline = ptcb->deadline; 
+
+        while(ptcb->OSTCBPrio != OS_IDLE_PRIO) {               /* Go through all TCBs in TCB list          */
+                if (ptcb->OSTCBDly == 0 && ptcb->deadline < cur_deadline) {           /* Delayed or waiting for event with TO     */
+                    cur_prio = ptcb->OSTCBPrio;
+                    cur_deadline = ptcb->deadline;
+                }
+                ptcb = ptcb->OSTCBNext;                        /* Point at next TCB in TCB list            */
+        }
+        return cur_prio;
+    }
+#endif
