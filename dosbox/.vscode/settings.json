@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "OS_MUTEX.C": "cpp",
+        "TEST.C": "cpp",
+        "OS_CORE.C": "cpp"
+    }
+}

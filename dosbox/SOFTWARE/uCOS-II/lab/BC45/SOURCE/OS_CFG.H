@@ -75,6 +75,7 @@
 #define OS_MUTEX_ACCEPT_EN        1    /*     Include code for OSMutexAccept()                         */
 #define OS_MUTEX_DEL_EN           1    /*     Include code for OSMutexDel()                            */
 #define OS_MUTEX_QUERY_EN         1    /*     Include code for OSMutexQuery()                          */
+#define OS_MUTEX_HLPP_EN          1    /*     Enable highest locker's priority protocol                */
 
 
                                        /* ---------------------- MESSAGE QUEUES ---------------------- */

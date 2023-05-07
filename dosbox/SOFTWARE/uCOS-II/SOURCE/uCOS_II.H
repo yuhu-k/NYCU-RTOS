@@ -212,9 +212,15 @@
 typedef struct {
     INT8U   OSEventType;                   /* Type of event control block (see OS_EVENT_TYPE_???)      */
     INT8U   OSEventGrp;                    /* Group corresponding to tasks waiting for event to occur  */
+#if OS_MUTEX_HLPP_EN == 0
     INT16U  OSEventCnt;                    /* Semaphore Count (not used if other EVENT type)           */
+#endif
     void   *OSEventPtr;                    /* Pointer to message or queue structure                    */
     INT8U   OSEventTbl[OS_EVENT_TBL_SIZE]; /* List of tasks waiting for event to occur                 */
+#if OS_MUTEX_HLPP_EN == 1
+    INT8U   OSEventPrio;                   /* Priority of the mutex to increase task's priority        */
+    INT8U   OSEventTskPrio;                /* Priority of the task have the mutex                      */
+#endif
 } OS_EVENT;
 #endif
 
@@ -409,6 +415,9 @@ typedef struct os_tcb {
 
 #if OS_TASK_DEL_EN > 0
     BOOLEAN        OSTCBDelReq;        /* Indicates whether a task needs to delete itself              */
+#endif
+#if OS_MUTEX_HLPP_EN == 1
+    INT8U          OSTCBMutex;         /* Save the mutex it own                                        */
 #endif
 } OS_TCB;
 
