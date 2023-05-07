@@ -18,21 +18,22 @@
 *********************************************************************************************************
 */
 
-#define          example             0
+#define          SCENARIO            1
 
 #define          TASK_STK_SIZE     512                /* Size of each task's stacks (# of WORDs)       */
 
 #define          TASK_START_ID       0                /* Application tasks                             */
-#define          TASK_CLK_ID         1
-#define          TASK_1_ID           2
-#define          TASK_2_ID           3
-#define          TASK_3_ID           4
+#define          TASK_1_ID           1
+#define          TASK_2_ID           2
+#define          TASK_3_ID           3
 
-#define          TASK_START_PRIO    10                /* Application tasks priorities                  */
-#define          TASK_CLK_PRIO      11
-#define          TASK_1_PRIO        12
-#define          TASK_2_PRIO        13
-#define          TASK_3_PRIO        14
+#define          TASK_START_PRIO     15               /* Application tasks priorities                  */
+#define          TASK_1_PRIO         3
+#define          TASK_2_PRIO         4
+#define          TASK_3_PRIO         5
+
+#define          MUTEX_1_PRIO        1
+#define          MUTEX_2_PRIO        2
 
 #define          MSG_QUEUE_SIZE     20                /* Size of message queue used in example         */
 
@@ -49,10 +50,14 @@ typedef struct {
     INT32U  TaskTotExecTime;
 } TASK_USER_DATA;
 
-typedef struct period{
-    int exeTime;
-    int period;
-} TASK_PARAMETER_DATA;
+typedef struct {
+    OS_EVENT *resource;
+    INT8U err;
+} MUTEX_USER;
+
+//typedef struct period{
+//    MUTEX_USER* resource[2];
+//} TASK_PARAMETER_DATA;
 
 /*
 *********************************************************************************************************
@@ -67,13 +72,15 @@ OS_STK          Task3Stk[TASK_STK_SIZE];              /* Task #3    task stack  
 
 TASK_USER_DATA  TaskUserData[7];
 
-#if example == 0
-    #define UserProcessNum  2
-#elif example == 1
+
+#if SCENARIO == 1
     #define UserProcessNum  3
+#elif SCENARIO == 2
+    #define UserProcessNum  2
 #endif
 
-static TASK_PARAMETER_DATA  TaskPdata[UserProcessNum];       /* The number of user's process for lab 1*/
+static MUTEX_USER           resource[2];
+//static TASK_PARAMETER_DATA  TaskPdata[UserProcessNum];       /* The number of user's process for lab*/
 
 
 /*
@@ -84,9 +91,8 @@ static TASK_PARAMETER_DATA  TaskPdata[UserProcessNum];       /* The number of us
 
         void  TaskStart(void *data);                  /* Function prototypes of tasks                  */
 static  void  TaskStartCreateTasks(void);
-        void  Task1(void *data);
-        void  Task2(void *data);
-        void  Task3(void *data);
+        void  UserTask(void *data);
+        INT8U OSLabLogPrint (const char *buffer);
 
 /*$PAGE*/
 /*
@@ -116,6 +122,7 @@ void  main (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_START_ID],
                     0);  
+    OSTimeSet(0);
     OSStart();                                             /* Start multitasking                       */
 }
 
@@ -140,7 +147,7 @@ void  TaskStart (void *pdata)
 
     OS_ENTER_CRITICAL();                                   /* Install uC/OS-II's clock tick ISR        */
     PC_VectSet(0x08, OSTickISR);
-    PC_SetTickRate(OS_TICKS_PER_SEC);                                     /* Reprogram tick rate                      */
+    PC_SetTickRate(OS_TICKS_PER_SEC);                      /* Reprogram tick rate                      */
     OS_EXIT_CRITICAL();
 
     TaskStartCreateTasks();
@@ -176,12 +183,12 @@ void  TaskStart (void *pdata)
 
 void  TaskStartCreateTasks (void)
 {
-#if example == 0
-    strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1(1,3)");
-    TaskPdata[0].exeTime = 1;
-    TaskPdata[0].period = 3;
-    OSTaskCreateExt(Task1,
-                    (void *)(&TaskPdata[0]),
+#if SCENARIO == 1
+    resource[0].resource = OSMutexCreate(MUTEX_1_PRIO,&(resource[0].err));
+    resource[1].resource = OSMutexCreate(MUTEX_2_PRIO,&(resource[1].err));
+    strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1");
+    OSTaskCreateExt(UserTask,
+                    (void*)TASK_1_ID,
                     &Task1Stk[TASK_STK_SIZE - 1],
                     TASK_1_PRIO,
                     TASK_1_ID,
@@ -189,21 +196,31 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_1_ID],
                     0);
-    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2(3,6)");
-    TaskPdata[1].exeTime = 3;
-    TaskPdata[1].period = 6;
-    OSTaskCreateExt(Task1,
-                    (void *)(&TaskPdata[1]),
-                    &Task2Stk[TASK_STK_SIZE - 1],
-                    TASK_2_PRIO,
-                    TASK_2_ID,
-                    &Task2Stk[0],
-                    TASK_STK_SIZE,
-                    &TaskUserData[TASK_2_ID],
-                    0);
-
     
-#elif example == 1
+    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
+    //OSTaskCreateExt(UserTask,
+    //                (void*)TASK_2_ID,
+    //                &Task2Stk[TASK_STK_SIZE - 1],
+    //                TASK_2_PRIO,
+    //                TASK_2_ID,
+    //                &Task2Stk[0],
+    //                TASK_STK_SIZE,
+    //                &TaskUserData[TASK_2_ID],
+    //                0);
+//
+    //strcpy(TaskUserData[TASK_3_ID].TaskName, "Task3");
+    //OSTimeDly(8);
+    //OSTaskCreateExt(UserTask,
+    //                (void*)TASK_3_ID,
+    //                &Task3Stk[TASK_STK_SIZE - 1],
+    //                TASK_3_PRIO,
+    //                TASK_3_ID,
+    //                &Task3Stk[0],
+    //                TASK_STK_SIZE,
+    //                &TaskUserData[TASK_3_ID],
+    //                0);
+//
+#elif SCENARIO == 2
     strcpy(TaskUserData[TASK_5_ID].TaskName, "Task1(1,3)");
     OSTaskCreateExt(Task5,
                     (void *)0,
@@ -224,16 +241,6 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_5_ID],
                     0);
-    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task3(4,9)");
-    OSTaskCreateExt(Task5,
-                    (void *)0,
-                    &Task5Stk[TASK_STK_SIZE - 1],
-                    TASK_5_PRIO,
-                    TASK_5_ID,
-                    &Task5Stk[0],
-                    TASK_STK_SIZE,
-                    &TaskUserData[TASK_5_ID],
-                    0);
 #endif
 
 }
@@ -244,38 +251,67 @@ void  TaskStartCreateTasks (void)
 *********************************************************************************************************
 */
 
-void  Task1 (void *pdata)
+void  UserTask (void *pdata)
 {
-    char  *msg;
-    INT8U  err;
-
-
-    TASK_PARAMETER_DATA *argv = (TASK_PARAMETER_DATA*)pdata;
     INT16U start;
     INT16U end;
     INT16U toDelay;
+    INT8U  TaskID;
 
-    INT16U c = argv->exeTime;
-    OS_ENTER_CRITICAL();
-    OSTCBCur->compTime = c;
-    OSTCBCur->period = argv->period;
-    OS_EXIT_CRITICAL();
-
-    start = OSTimeGet();
-
-    while (1)
+    TaskID = (INT8U) pdata;
+    switch (TaskID)
     {
-        while(OSTCBCur->compTime > 0);
-        end = OSTimeGet();
-        toDelay = OSTCBCur->period - (end - start);
-        start = start + OSTCBCur->period;
+    case TASK_1_ID:
         OS_ENTER_CRITICAL();
-        OSTCBCur->compTime = c;
+        OSTCBCur->compTime = 2;
         OS_EXIT_CRITICAL();
-        OSTimeDly(toDelay);
-    }
+        while(OSTCBCur->compTime > 0);
+
+        //OSMutexPend(resource[0].resource,0,&(resource[0].err));
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        //OSMutexPend(resource[1].resource,0,&(resource[1].err));
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+        //OSMutexPost(resource[1].resource);
+        //OSMutexPost(resource[0].resource);
+        break;
     
+    case TASK_2_ID:
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 4;
+        OS_EXIT_CRITICAL();
+        OSMutexPend(resource[1].resource,0,&(resource[1].err));
+        while(OSTCBCur->compTime > 0);
+        OSMutexPost(resource[1].resource);
+        break;
+    
+    case TASK_3_ID:
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 7;
+        OS_EXIT_CRITICAL();
+        OSMutexPend(resource[0].resource,0,&(resource[0].err));
+        while(OSTCBCur->compTime > 0);
+        OSMutexPost(resource[0].resource);
+        break;
+    }
+    //OSTimeDly(65536);
 }
+
 /*
 *********************************************************************************************************
 *                                       OS INITIALIZATION HOOK
@@ -363,4 +399,14 @@ void  OSTCBInitHook (OS_TCB *ptcb)
 */
 void  OSTimeTickHook (void)
 {
+}
+
+INT8U OSLabLogPrint (const char *buffer){
+    if(OSTASKDmp.full == 0 || OSTASKDmp.queue_head != OSTASKDmp.queue_tail){
+        sprintf(OSTASKDmp.queue[OSTASKDmp.queue_tail],buffer);
+        OSTASKDmp.queue_tail = (OSTASKDmp.queue_tail+1) % 32;
+        OSTASKDmp.full = 1;
+        return 1;
+    }
+    return 0;
 }

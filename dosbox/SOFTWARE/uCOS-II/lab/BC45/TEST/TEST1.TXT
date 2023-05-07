@@ -1,0 +1,17 @@
+    1 Completed    15     3
+    3        lock      R0    (Pri
+    5 Completed     3    15
+    0 Completed    15    63
+   10 Preempt      63    15
+   10 Completed    15    63
+   20 Preempt      63    15
+   20 Completed    15    63
+   30 Preempt      63    15
+   30 Completed    15    63
+   40 Preempt      63    15
+   40 Completed    15    63
+   50 Preempt      63    15
+   50 Completed    15    63
+   60 Preempt      63    15
+   60 Completed    15    63
+   70 Preempt      63    15

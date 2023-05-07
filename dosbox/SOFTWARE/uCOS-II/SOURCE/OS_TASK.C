@@ -104,7 +104,9 @@ INT8U  OSTaskChangePrio (INT8U oldprio, INT8U newprio)
             ptcb->OSTCBBitY       = bity;
             ptcb->OSTCBBitX       = bitx;
             OS_EXIT_CRITICAL();
+            #if OS_MUTEX_HLPP_EN == 0
             OS_Sched();                                         /* Run highest priority task ready     */
+            #endif
             return (OS_NO_ERR);
         } else {
             OSTCBPrioTbl[newprio] = (OS_TCB *)0;                /* Release the reserved prio.          */

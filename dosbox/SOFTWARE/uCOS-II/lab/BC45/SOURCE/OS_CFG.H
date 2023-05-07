@@ -71,11 +71,11 @@
 
 
                                        /* ---------------- MUTUAL EXCLUSION SEMAPHORES --------------- */
-#define OS_MUTEX_EN               0    /* Enable (1) or Disable (0) code generation for MUTEX          */
+#define OS_MUTEX_EN               1    /* Enable (1) or Disable (0) code generation for MUTEX          */
 #define OS_MUTEX_ACCEPT_EN        1    /*     Include code for OSMutexAccept()                         */
 #define OS_MUTEX_DEL_EN           1    /*     Include code for OSMutexDel()                            */
 #define OS_MUTEX_QUERY_EN         1    /*     Include code for OSMutexQuery()                          */
-#define OS_MUTEX_HLPP_EN          1    /*     Enable highest locker's priority protocol                */
+#define OS_MUTEX_HLPP_EN          0    /*     Enable highest locker's priority protocol                */
 
 
                                        /* ---------------------- MESSAGE QUEUES ---------------------- */
@@ -97,7 +97,7 @@
 
 
                                        /* --------------------- TASK MANAGEMENT ---------------------- */
-#define OS_TASK_CHANGE_PRIO_EN    0    /*     Include code for OSTaskChangePrio()                      */
+#define OS_TASK_CHANGE_PRIO_EN    1    /*     Include code for OSTaskChangePrio()                      */
 #define OS_TASK_CREATE_EN         0    /*     Include code for OSTaskCreate()                          */
 #define OS_TASK_CREATE_EXT_EN     1    /*     Include code for OSTaskCreateExt()                       */
 #define OS_TASK_DEL_EN            0    /*     Include code for OSTaskDel()                             */

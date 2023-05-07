@@ -212,9 +212,7 @@
 typedef struct {
     INT8U   OSEventType;                   /* Type of event control block (see OS_EVENT_TYPE_???)      */
     INT8U   OSEventGrp;                    /* Group corresponding to tasks waiting for event to occur  */
-#if OS_MUTEX_HLPP_EN == 0
     INT16U  OSEventCnt;                    /* Semaphore Count (not used if other EVENT type)           */
-#endif
     void   *OSEventPtr;                    /* Pointer to message or queue structure                    */
     INT8U   OSEventTbl[OS_EVENT_TBL_SIZE]; /* List of tasks waiting for event to occur                 */
 #if OS_MUTEX_HLPP_EN == 1
@@ -1175,7 +1173,6 @@ void          OSTickISR(void);
 
 
 //**** my define
-#define CtxSwMessageSize 300
-extern char CtxSwMessage[CtxSwMessageSize][50];
-extern int CtxSwMessageTop ;
-extern OS_EVENT     *printCtxSwMbox;                               /* Message mailboxes for Tasks #4 and #5         */
+#if OS_MUTEX_HLPP_EN == 1
+INT8U OSLabLogPrint (const char *buffer);
+#endif
