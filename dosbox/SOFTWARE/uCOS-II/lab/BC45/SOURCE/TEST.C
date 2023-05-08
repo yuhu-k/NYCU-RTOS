@@ -117,7 +117,6 @@ void  main (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_START_ID],
                     0);  
-    OSTimeSet(0);
     OSStart();                                             /* Start multitasking                       */
 }
 
@@ -184,6 +183,20 @@ void  TaskStartCreateTasks (void)
     resource[0] = OSMutexCreate(MUTEX_1_PRIO,&err1);
     resource[1] = OSMutexCreate(MUTEX_2_PRIO,&err2);
     strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1");
+    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
+    strcpy(TaskUserData[TASK_3_ID].TaskName, "Task3");
+
+    OSTaskCreateExt(UserTask,
+                    (void*)TASK_3_ID,
+                    &Task3Stk[TASK_STK_SIZE - 1],
+                    TASK_3_PRIO,
+                    TASK_3_ID,
+                    &Task3Stk[0],
+                    TASK_STK_SIZE,
+                    &TaskUserData[TASK_3_ID],
+                    0);
+    
+
     OSTaskCreateExt(UserTask,
                     (void*)TASK_1_ID,
                     &Task1Stk[TASK_STK_SIZE - 1],
@@ -193,29 +206,16 @@ void  TaskStartCreateTasks (void)
                     TASK_STK_SIZE,
                     &TaskUserData[TASK_1_ID],
                     0);
-    //strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
-    //OSTaskCreateExt(UserTask,
-    //                (void*)TASK_2_ID,
-    //                &Task2Stk[TASK_STK_SIZE - 1],
-    //                TASK_2_PRIO,
-    //                TASK_2_ID,
-    //                &Task2Stk[0],
-    //                TASK_STK_SIZE,
-    //                &TaskUserData[TASK_2_ID],
-    //                0);
-//
-    //strcpy(TaskUserData[TASK_3_ID].TaskName, "Task3");
-    //OSTimeDly(8);
-    //OSTaskCreateExt(UserTask,
-    //                (void*)TASK_3_ID,
-    //                &Task3Stk[TASK_STK_SIZE - 1],
-    //                TASK_3_PRIO,
-    //                TASK_3_ID,
-    //                &Task3Stk[0],
-    //                TASK_STK_SIZE,
-    //                &TaskUserData[TASK_3_ID],
-    //                0);
-//
+    
+    OSTaskCreateExt(UserTask,
+                    (void*)TASK_2_ID,
+                    &Task2Stk[TASK_STK_SIZE - 1],
+                    TASK_2_PRIO,
+                    TASK_2_ID,
+                    &Task2Stk[0],
+                    TASK_STK_SIZE,
+                    &TaskUserData[TASK_2_ID],
+                    0);
 #elif SCENARIO == 2
     strcpy(TaskUserData[TASK_5_ID].TaskName, "Task1(1,3)");
     OSTaskCreateExt(Task5,
@@ -249,16 +249,19 @@ void  TaskStartCreateTasks (void)
 
 void  UserTask (void *pdata)
 {
-    INT16U start;
-    INT16U end;
-    INT16U toDelay;
+    int toDelay;
     INT8U  TaskID;
     INT8U  err;
+    INT16U time;
 
+    time = OSTimeGet();
     TaskID = (INT8U) pdata;
     switch (TaskID)
     {
     case TASK_1_ID:
+        toDelay = 4 - (int)time;
+        if (toDelay > 0) OSTimeDly(toDelay);
+
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 2;
         OS_EXIT_CRITICAL();
@@ -280,14 +283,18 @@ void  UserTask (void *pdata)
         break;
     
     case TASK_2_ID:
+        toDelay = 8 - (int)time;
+        if (toDelay > 0) OSTimeDly(toDelay);
+
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 2;
         OS_EXIT_CRITICAL();
         while(OSTCBCur->compTime > 0);
+
+        OSMutexPend(resource[1],0,&(err));
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 4;
         OS_EXIT_CRITICAL();
-        OSMutexPend(resource[1],0,&(err));
         while(OSTCBCur->compTime > 0);
         OSMutexPost(resource[1]);
         break;
@@ -298,10 +305,10 @@ void  UserTask (void *pdata)
         OS_EXIT_CRITICAL();
         while(OSTCBCur->compTime > 0);
 
+        OSMutexPend(resource[0],0,&(err));
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 7;
         OS_EXIT_CRITICAL();
-        OSMutexPend(resource[0],0,&(err));
         while(OSTCBCur->compTime > 0);
         OSMutexPost(resource[0]);
         break;
