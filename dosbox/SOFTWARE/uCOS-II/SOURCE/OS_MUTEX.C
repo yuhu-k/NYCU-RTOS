@@ -147,6 +147,7 @@ OS_EVENT  *OSMutexCreate (INT8U prio, INT8U *err)
     OS_ENTER_CRITICAL();
 #if OS_MUTEX_HLPP_EN > 0
     pevent->OSEventTskPrio = (INT8U)(0xFF);
+    pevent->OSEventPrio    = (INT8U)(prio);
 #endif
     if (OSTCBPrioTbl[prio] != (OS_TCB *)0) {               /* Mutex priority must not already exist    */
         OS_EXIT_CRITICAL();                                /* Task already exist at priority ...       */
@@ -336,27 +337,30 @@ void  OSMutexPend (OS_EVENT *pevent, INT16U timeout, INT8U *err)
 #endif
 #if OS_MUTEX_HLPP_EN > 0
     OS_ENTER_CRITICAL();
-    if (pevent->OSEventTskPrio == 0xFF && OSTCBPrioTbl[pevent->OSEventPrio] == (OS_TCB *)1) {
-        //OSTCBCur->OSTCBMutex |= (INT8U)(1 << OSTCBCur->OSTCBPrio);
-        //prio = OSTCBCur->OSTCBPrio;
+    if (pevent->OSEventTskPrio == 0xFF) {
+        OSTCBCur->OSTCBMutex |= (INT8U)(1 << OSTCBCur->OSTCBPrio);
+        prio = OSTCBCur->OSTCBPrio;
         if(pevent->OSEventPrio < OSTCBCur->OSTCBPrio){
-            //OSTaskChangePrio(OSTCBCur->OSTCBPrio,pevent->OSEventPrio);
-            //OSPrioCur = pevent->OSEventPrio;
-            //OSTCBCur->OSTCBPrio   = pevent->OSEventPrio;
-            //OSTCBCur->OSTCBY      = OSTCBCur->OSTCBPrio >> 3;
-            //OSTCBCur->OSTCBBitY   = OSMapTbl[OSTCBCur->OSTCBY];
-            //OSTCBCur->OSTCBX      = OSTCBCur->OSTCBPrio & 0x07;
-            //OSTCBCur->OSTCBBitX   = OSMapTbl[OSTCBCur->OSTCBX];
-            //OSTCBPrioTbl[prio] = (OS_TCB *)1;
+            OSTaskChangePrio(OSTCBCur->OSTCBPrio,pevent->OSEventPrio);
+            OSPrioCur = pevent->OSEventPrio;
+            //OSTCBCur->OSTCBPrio          = pevent->OSEventPrio;
+            //OSTCBCur->OSTCBY             = OSTCBCur->OSTCBPrio >> 3;
+            //OSTCBCur->OSTCBBitY          = OSMapTbl[OSTCBCur->OSTCBY];
+            //OSTCBCur->OSTCBX             = OSTCBCur->OSTCBPrio & 0x07;
+            //OSTCBCur->OSTCBBitX          = OSMapTbl[OSTCBCur->OSTCBX];
+            //OSRdyGrp                    |= OSTCBCur->OSTCBBitY;
+            //OSRdyTbl[OSTCBCur->OSTCBY]  |= OSTCBCur->OSTCBBitX;
+            //OSTCBPrioTbl[prio]           = (OS_TCB *)1;
+            //OSTCBPrioTbl[OSTCBCur->OSTCBPrio]       = (OS_TCB *)OSTCBCur;
         }
-        //pevent->OSEventTskPrio = OSTCBCur->OSTCBPrio;
-        //pevent->OSEventPtr     = (void *)OSTCBCur;            /*      Point to owning task's OS_TCB       */
-        //sprintf(comment,"%5d    lock      R%d    ", time, pevent->OSEventPrio);
-        //OSLabLogPrint(comment);
-        //sprintf(comment,"(Prio=%d changes to=%d)\n",prio, OSTCBCur->OSTCBPrio);
-        //OSLabLogPrint(comment);
+        pevent->OSEventTskPrio = OSTCBCur->OSTCBPrio;
+        pevent->OSEventPtr     = (void *)OSTCBCur;            /*      Point to owning task's OS_TCB       */
+        sprintf(comment,"%5d    lock      R%d    ", time, pevent->OSEventPrio);
+        OSLabLogPrint(comment);
+        sprintf(comment,"(Prio=%d changes to=%d)%d\n",prio, pevent->OSEventPrio,OSRdyGrp);
+        OSLabLogPrint(comment);
         OS_EXIT_CRITICAL();
-        //*err  = OS_NO_ERR;
+        *err  = OS_NO_ERR;
         return;
     }
     OSTCBCur->OSTCBStat |= OS_STAT_MUTEX;             /* Mutex not available, pend current task        */
@@ -484,14 +488,16 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
         }
         prio = (INT8U)(OSUnMapTbl[OSTCBCur->OSTCBMutex]); /* Get owner's original priority      */
         OSTCBCur->OSTCBMutex       &= ~(INT8U)(1 << pevent->OSEventPrio);
-        OSTCBCur->OSTCBPrio         = prio;
-        OSTCBCur->OSTCBY            = prio >> 3;
-        OSTCBCur->OSTCBBitY         = OSMapTbl[OSTCBCur->OSTCBY];
-        OSTCBCur->OSTCBX            = prio & 0x07;
-        OSTCBCur->OSTCBBitX         = OSMapTbl[OSTCBCur->OSTCBX];
-        OSRdyGrp                   |= OSTCBCur->OSTCBBitY;
-        OSRdyTbl[OSTCBCur->OSTCBY] |= OSTCBCur->OSTCBBitX;
-        OSTCBPrioTbl[prio]          = (OS_TCB *)OSTCBCur;
+        OSTaskChangePrio(OSTCBCur->OSTCBPrio,prio);
+        OSPrioCur = prio;
+        //OSTCBCur->OSTCBPrio         = prio;
+        //OSTCBCur->OSTCBY            = prio >> 3;
+        //OSTCBCur->OSTCBBitY         = OSMapTbl[OSTCBCur->OSTCBY];
+        //OSTCBCur->OSTCBX            = prio & 0x07;
+        //OSTCBCur->OSTCBBitX         = OSMapTbl[OSTCBCur->OSTCBX];
+        //OSRdyGrp                   |= OSTCBCur->OSTCBBitY;
+        //OSRdyTbl[OSTCBCur->OSTCBY] |= OSTCBCur->OSTCBBitX;
+        //OSTCBPrioTbl[prio]          = (OS_TCB *)OSTCBCur;
     }
     sprintf(comment,"%5d  unlock      R%d    (Prio=%d changes to=%d)\n", time, pevent->OSEventPrio, ori_prio, OSTCBCur->OSTCBPrio);
     OSLabLogPrint(comment);
@@ -504,11 +510,12 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
         ptcb              = OSTCBPrioTbl[prio];
         ptcb->OSTCBMutex |= (INT8U)(1 << prio);
         if(pevent->OSEventPrio < ptcb->OSTCBPrio){
-            ptcb->OSTCBPrio   = pevent->OSEventPrio;
-            ptcb->OSTCBY      = ptcb->OSTCBPrio >> 3;
-            ptcb->OSTCBBitY   = OSMapTbl[ptcb->OSTCBY];
-            ptcb->OSTCBX      = ptcb->OSTCBPrio & 0x07;
-            ptcb->OSTCBBitX   = OSMapTbl[ptcb->OSTCBX];
+            //ptcb->OSTCBPrio   = pevent->OSEventPrio;
+            //ptcb->OSTCBY      = ptcb->OSTCBPrio >> 3;
+            //ptcb->OSTCBBitY   = OSMapTbl[ptcb->OSTCBY];
+            //ptcb->OSTCBX      = ptcb->OSTCBPrio & 0x07;
+            //ptcb->OSTCBBitX   = OSMapTbl[ptcb->OSTCBX];
+            OSTaskChangePrio(ptcb->OSTCBPrio,pevent->OSEventPrio);
         }
         pevent->OSEventTskPrio = ptcb->OSTCBPrio;
         pevent->OSEventPtr     = (void *)ptcb;            /*      Point to owning task's OS_TCB       */
