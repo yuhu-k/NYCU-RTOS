@@ -18,7 +18,7 @@
 *********************************************************************************************************
 */
 
-#define          SCENARIO            1
+#define          SCENARIO            2
 
 #define          TASK_STK_SIZE     512                /* Size of each task's stacks (# of WORDs)       */
 
@@ -178,10 +178,10 @@ void  TaskStart (void *pdata)
 
 void  TaskStartCreateTasks (void)
 {
-#if SCENARIO == 1
     INT8U   err1,err2;
     resource[0] = OSMutexCreate(MUTEX_1_PRIO,&err1);
     resource[1] = OSMutexCreate(MUTEX_2_PRIO,&err2);
+#if SCENARIO == 1
     strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1");
     strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
     strcpy(TaskUserData[TASK_3_ID].TaskName, "Task3");
@@ -217,25 +217,26 @@ void  TaskStartCreateTasks (void)
                     &TaskUserData[TASK_2_ID],
                     0);
 #elif SCENARIO == 2
-    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task1(1,3)");
-    OSTaskCreateExt(Task5,
-                    (void *)0,
-                    &Task5Stk[TASK_STK_SIZE - 1],
-                    TASK_5_PRIO,
-                    TASK_5_ID,
-                    &Task5Stk[0],
+    strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1");
+    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
+
+    OSTaskCreateExt(UserTask,
+                    (void *)TASK_1_ID,
+                    &Task1Stk[TASK_STK_SIZE - 1],
+                    TASK_1_PRIO,
+                    TASK_1_ID,
+                    &Task1Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_5_ID],
+                    &TaskUserData[TASK_1_ID],
                     0);
-    strcpy(TaskUserData[TASK_5_ID].TaskName, "Task2(3,6)");
-    OSTaskCreateExt(Task5,
-                    (void *)0,
-                    &Task5Stk[TASK_STK_SIZE - 1],
-                    TASK_5_PRIO,
-                    TASK_5_ID,
-                    &Task5Stk[0],
+    OSTaskCreateExt(UserTask,
+                    (void *)TASK_2_ID,
+                    &Task2Stk[TASK_STK_SIZE - 1],
+                    TASK_2_PRIO,
+                    TASK_2_ID,
+                    &Task2Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_5_ID],
+                    &TaskUserData[TASK_2_ID],
                     0);
 #endif
 
@@ -256,6 +257,7 @@ void  UserTask (void *pdata)
 
     time = OSTimeGet();
     TaskID = (INT8U) pdata;
+#if SCENARIO == 1
     switch (TaskID)
     {
     case TASK_1_ID:
@@ -313,6 +315,67 @@ void  UserTask (void *pdata)
         OSMutexPost(resource[0]);
         break;
     }
+#elif SCENARIO == 2
+    switch (TaskID)
+    {
+    case TASK_1_ID:
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPend(resource[0],0,&err);
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 6;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPend(resource[1],0,&err);
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+        
+        OSMutexPost(resource[1]);
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPost(resource[0]);
+        break;
+    
+    case TASK_2_ID:
+        toDelay = 5 - (int)time;
+        if (toDelay > 0) OSTimeDly(toDelay);
+
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 2;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPend(resource[1],0,&(err));
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 3;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPend(resource[1],0,&(err));
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 3;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPost(resource[0]);
+        OS_ENTER_CRITICAL();
+        OSTCBCur->compTime = 3;
+        OS_EXIT_CRITICAL();
+        while(OSTCBCur->compTime > 0);
+
+        OSMutexPost(resource[1]);
+        break;
+    }
+#endif
     OSTaskDel(OS_PRIO_SELF);
 }
 

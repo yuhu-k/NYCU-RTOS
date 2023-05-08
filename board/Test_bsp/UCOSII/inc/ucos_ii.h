@@ -401,6 +401,10 @@ typedef struct os_event {
 #if OS_EVENT_NAME_SIZE > 1
     INT8U    OSEventName[OS_EVENT_NAME_SIZE];
 #endif
+#if OS_MUTEX_HLPP_EN == 1
+    INT8U   OSEventPrio;                   /* Priority of the mutex to increase task's priority        */
+    INT8U   OSEventTskPrio;                /* Priority of the task have the mutex                      */
+#endif
 } OS_EVENT;
 #endif
 
@@ -658,6 +662,9 @@ typedef struct os_tcb {
 #endif
     INT32U          compTime;
     INT32U          period;
+#if OS_MUTEX_HLPP_EN == 1
+    INT8U          OSTCBMutex;         /* Save the mutex it own                                        */
+#endif
 } OS_TCB;
 
 /*$PAGE*/
@@ -1944,3 +1951,7 @@ typedef struct lab1_info {
     INT8U           full;
     char            queue[32][32];           
 } LAB1_INFO;
+
+#if OS_MUTEX_HLPP_EN == 1
+INT8U OSLabLogPrint (const char *buffer);
+#endif
