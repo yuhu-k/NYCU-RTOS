@@ -275,8 +275,8 @@ void  UserTask (void *pdata)
         OSTCBCur->compTime = 2;
         OS_EXIT_CRITICAL();
         while(OSTCBCur->compTime > 0);
-        //OSMutexPost(resource[1]);
-        //OSMutexPost(resource[0]);
+        OSMutexPost(resource[1]);
+        OSMutexPost(resource[0]);
         break;
     
     case TASK_2_ID:
