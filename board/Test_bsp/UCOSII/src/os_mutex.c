@@ -1,4 +1,4 @@
-/*
+﻿/*
 *********************************************************************************************************
 *                                                uC/OS-II
 *                                          The Real-Time Kernel
@@ -14,7 +14,7 @@
 * LICENSING TERMS:
 * ---------------
 *   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.  
-* If you plan on using  uC/OS-II  in a commercial product you need to contact Micri�m to properly license 
+* If you plan on using  uC/OS-II  in a commercial product you need to contact Micri�m to properly license
 * its use in your product. We provide ALL the source code for your convenience and to help you experience 
 * uC/OS-II.   The fact that the  source is provided does  NOT  mean that you can use it without  paying a 
 * licensing fee.
@@ -196,7 +196,7 @@ OS_EVENT  *OSMutexCreate (INT8U prio, INT8U *perr)
 #else
     OSTCBPrioTbl[prio] = OS_TCB_RESERVED;                  /* Reserve the table entry                  */
 #endif
-    
+
     pevent             = OSEventFreeList;                  /* Get next free event control block        */
     if (pevent == (OS_EVENT *)0) {                         /* See if an ECB was available              */
         OSTCBPrioTbl[prio] = (OS_TCB *)0;                  /* No, Release the table entry              */
@@ -412,6 +412,11 @@ void  OSMutexPend (OS_EVENT *pevent, INT16U timeout, INT8U *perr)
     OS_TCB    *ptcb;
     OS_EVENT  *pevent2;
     INT8U      y;
+#if OS_MUTEX_HLPP_EN > 0
+    INT8U      prio;
+    INT8U      time;
+    char       comment[32];
+#endif
 #if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
     OS_CPU_SR  cpu_sr = 0;
 #endif
@@ -441,6 +446,7 @@ void  OSMutexPend (OS_EVENT *pevent, INT16U timeout, INT8U *perr)
     }
 /*$PAGE*/
 #if OS_MUTEX_HLPP_EN > 0
+    time = OSTimeGet();
     OS_ENTER_CRITICAL();
     if (pevent->OSEventTskPrio == 0xFF) {
         prio = OSTCBCur->OSTCBPrio;
@@ -455,10 +461,10 @@ void  OSMutexPend (OS_EVENT *pevent, INT16U timeout, INT8U *perr)
         pevent->OSEventPtr     = (void *)OSTCBCur;            /*      Point to owning task's OS_TCB       */
         sprintf(comment,"%5d    lock      R%d    ", time, pevent->OSEventPrio);
         OSLabLogPrint(comment);
-        sprintf(comment,"(Prio=%d changes to=%d)\n",prio, pevent->OSEventPrio);
+        sprintf(comment,"(Prio=%d changes to=%d)\n",prio, OSTCBCur->OSTCBPrio);
         OSLabLogPrint(comment);
         OS_EXIT_CRITICAL();
-        *err  = OS_NO_ERR;
+        *perr  = OS_NO_ERR;
         return;
     }
     OSTCBCur->OSTCBStat |= OS_STAT_MUTEX;             /* Mutex not available, pend current task        */
@@ -468,14 +474,14 @@ void  OSMutexPend (OS_EVENT *pevent, INT16U timeout, INT8U *perr)
     OS_Sched();                                       /* Find next highest priority task ready         */
     OS_ENTER_CRITICAL();
     if (OSTCBCur->OSTCBStat & OS_STAT_MUTEX) {        /* Must have timed out if still waiting for event*/
-        OS_EventTO(pevent);
+    	OS_EventTaskRemove(OSTCBCur, pevent);
         OS_EXIT_CRITICAL();
-        *err = OS_TIMEOUT;                            /* Indicate that we didn't get mutex within TO   */
+        *perr = OS_TIMEOUT;                            /* Indicate that we didn't get mutex within TO   */
         return;
     }
     OSTCBCur->OSTCBEventPtr = (OS_EVENT *)0;
     OS_EXIT_CRITICAL();
-    *err = OS_NO_ERR;
+    *perr = OS_NO_ERR;
 #else
     OS_ENTER_CRITICAL();
     pip = (INT8U)(pevent->OSEventCnt >> 8);                /* Get PIP from mutex                       */
@@ -598,6 +604,12 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
 {
     INT8U      pip;                                   /* Priority inheritance priority                 */
     INT8U      prio;
+#if OS_MUTEX_HLPP_EN > 0
+    INT8U      ori_prio;
+    INT8U      time;
+    char       comment[32];
+    OS_TCB     *ptcb;
+#endif
 #if OS_CRITICAL_METHOD == 3                           /* Allocate storage for CPU status register      */
     OS_CPU_SR  cpu_sr = 0;
 #endif
@@ -616,6 +628,7 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
         return (OS_ERR_EVENT_TYPE);
     }
 #if OS_MUTEX_HLPP_EN == 1
+    time = OSTimeGet();
     OS_ENTER_CRITICAL();
     ori_prio = OSTCBCur->OSTCBPrio;
     if (OSTCBCur->OSTCBMutex & (INT8U)(1 << pevent->OSEventPrio) == 0) { /* See if posting task owns the MUTEX            */
@@ -627,9 +640,9 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
                                                       /* Yes, Return to original priority              */
                                                       /*      Remove owner from ready list at 'pip'    */
     {
-        if ((OSRdyTbl[OSTCBCur->OSTCBY] &= ~OSTCBCur->OSTCBBitX) == 0) {
-            OSRdyGrp &= ~OSTCBCur->OSTCBBitY;
-        }
+        //if ((OSRdyTbl[OSTCBCur->OSTCBY] &= ~OSTCBCur->OSTCBBitX) == 0) {
+        //    OSRdyGrp &= ~OSTCBCur->OSTCBBitY;
+        //}
         prio = (INT8U)(OSUnMapTbl[OSTCBCur->OSTCBMutex]); /* Get owner's original priority      */
         OSTaskChangePrio(OSTCBCur->OSTCBPrio,prio);
         OSPrioCur = prio;
@@ -643,9 +656,10 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
     if (pevent->OSEventGrp != 0x00) {                 /* Any task waiting for the mutex?               */
                                                       /* Yes, Make HPT waiting for mutex ready         */
 
-        prio              = OS_EventTaskRdy(pevent, (void *)0, OS_STAT_MUTEX);
+        prio              = OS_EventTaskRdy(pevent, (void *)0, OS_STAT_MUTEX, OS_STAT_PEND_OK);
         ptcb              = OSTCBPrioTbl[prio];
         ptcb->OSTCBMutex |= (INT8U)(1 << prio);
+        ori_prio          = ptcb->OSTCBPrio;
         if(pevent->OSEventPrio < ptcb->OSTCBPrio){
             //ptcb->OSTCBPrio   = pevent->OSEventPrio;
             //ptcb->OSTCBY      = ptcb->OSTCBPrio >> 3;
@@ -656,6 +670,10 @@ INT8U  OSMutexPost (OS_EVENT *pevent)
         }
         pevent->OSEventTskPrio = ptcb->OSTCBPrio;
         pevent->OSEventPtr     = (void *)ptcb;            /*      Point to owning task's OS_TCB       */
+        sprintf(comment,"%5d    lock      R%d    ", time, pevent->OSEventPrio);
+        //OSLabLogPrint(comment);
+        sprintf(comment,"(Prio=%d changes to=%d)\n",ori_prio, OSTCBCur->OSTCBPrio);
+        //OSLabLogPrint(comment);
         OS_EXIT_CRITICAL();
         OS_Sched();
         return (OS_NO_ERR);

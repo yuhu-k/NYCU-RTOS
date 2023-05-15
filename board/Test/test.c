@@ -149,9 +149,9 @@ void  TaskStartCreateTasks (void)
     resource[0] = OSMutexCreate(MUTEX_1_PRIO,&err1);
     resource[1] = OSMutexCreate(MUTEX_2_PRIO,&err2);
 #if SCENARIO == 1
-    strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1");
-    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
-    strcpy(TaskUserData[TASK_3_ID].TaskName, "Task3");
+    strcpy(TaskUserData1[TASK_1_ID].TaskName, "Task1");
+    strcpy(TaskUserData1[TASK_2_ID].TaskName, "Task2");
+    strcpy(TaskUserData1[TASK_3_ID].TaskName, "Task3");
 
     OSTaskCreateExt(UserTask,
                     (void*)TASK_3_ID,
@@ -160,9 +160,9 @@ void  TaskStartCreateTasks (void)
                     TASK_3_ID,
                     &Task3Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_3_ID],
+                    &TaskUserData1[TASK_3_ID],
                     0);
-    
+
 
     OSTaskCreateExt(UserTask,
                     (void*)TASK_1_ID,
@@ -171,9 +171,9 @@ void  TaskStartCreateTasks (void)
                     TASK_1_ID,
                     &Task1Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_1_ID],
+                    &TaskUserData1[TASK_1_ID],
                     0);
-    
+
     OSTaskCreateExt(UserTask,
                     (void*)TASK_2_ID,
                     &Task2Stk[TASK_STK_SIZE - 1],
@@ -181,11 +181,11 @@ void  TaskStartCreateTasks (void)
                     TASK_2_ID,
                     &Task2Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_2_ID],
+                    &TaskUserData1[TASK_2_ID],
                     0);
 #elif SCENARIO == 2
-    strcpy(TaskUserData[TASK_1_ID].TaskName, "Task1");
-    strcpy(TaskUserData[TASK_2_ID].TaskName, "Task2");
+    strcpy(TaskUserData1[TASK_1_ID].TaskName, "Task1");
+    strcpy(TaskUserData1[TASK_2_ID].TaskName, "Task2");
 
     OSTaskCreateExt(UserTask,
                     (void *)TASK_1_ID,
@@ -194,7 +194,7 @@ void  TaskStartCreateTasks (void)
                     TASK_1_ID,
                     &Task1Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_1_ID],
+                    &TaskUserData1[TASK_1_ID],
                     0);
     OSTaskCreateExt(UserTask,
                     (void *)TASK_2_ID,
@@ -203,7 +203,7 @@ void  TaskStartCreateTasks (void)
                     TASK_2_ID,
                     &Task2Stk[0],
                     TASK_STK_SIZE,
-                    &TaskUserData[TASK_2_ID],
+                    &TaskUserData1[TASK_2_ID],
                     0);
 #endif
 
@@ -217,8 +217,11 @@ void  TaskStartCreateTasks (void)
 
 char Break = 0;
 
-void  Task (void *pdata)
+void  UserTask (void *pdata)
 {
+#if OS_CRITICAL_METHOD == 3                                /* Allocate storage for CPU status register */
+    OS_CPU_SR  cpu_sr;
+#endif
     int toDelay;
     INT8U  TaskID;
     INT8U  err;
@@ -252,7 +255,7 @@ void  Task (void *pdata)
         OSMutexPost(resource[1]);
         OSMutexPost(resource[0]);
         break;
-    
+
     case TASK_2_ID:
         toDelay = 8 - (int)time;
         if (toDelay > 0) OSTimeDly(toDelay);
@@ -269,7 +272,7 @@ void  Task (void *pdata)
         while(OSTCBCur->compTime > 0);
         OSMutexPost(resource[1]);
         break;
-    
+
     case TASK_3_ID:
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 2;
@@ -304,7 +307,7 @@ void  Task (void *pdata)
         OSTCBCur->compTime = 2;
         OS_EXIT_CRITICAL();
         while(OSTCBCur->compTime > 0);
-        
+
         OSMutexPost(resource[1]);
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 2;
@@ -313,7 +316,7 @@ void  Task (void *pdata)
 
         OSMutexPost(resource[0]);
         break;
-    
+
     case TASK_2_ID:
         toDelay = 5 - (int)time;
         if (toDelay > 0) OSTimeDly(toDelay);
@@ -329,7 +332,7 @@ void  Task (void *pdata)
         OS_EXIT_CRITICAL();
         while(OSTCBCur->compTime > 0);
 
-        OSMutexPend(resource[1],0,&(err));
+        OSMutexPend(resource[0],0,&(err));
         OS_ENTER_CRITICAL();
         OSTCBCur->compTime = 3;
         OS_EXIT_CRITICAL();

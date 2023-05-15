@@ -1938,7 +1938,7 @@ void          OSCtxSw                 (void);
 
 #endif
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                          Lab 1 INFO Dumper
@@ -1949,7 +1949,7 @@ typedef struct lab1_info {
     INT16U          queue_head;
     INT16U          queue_tail;
     INT8U           full;
-    char            queue[32][32];           
+    char            queue[32][32];
 } LAB1_INFO;
 
 #if OS_MUTEX_HLPP_EN == 1

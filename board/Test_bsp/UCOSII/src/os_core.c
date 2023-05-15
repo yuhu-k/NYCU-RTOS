@@ -1,4 +1,4 @@
-/*
+﻿/*
 *********************************************************************************************************
 *                                                uC/OS-II
 *                                          The Real-Time Kernel
@@ -13,10 +13,10 @@
 *
 * LICENSING TERMS:
 * ---------------
-*   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.  
+*   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.
 * If you plan on using  uC/OS-II  in a commercial product you need to contact Micri�m to properly license
-* its use in your product. We provide ALL the source code for your convenience and to help you experience 
-* uC/OS-II.   The fact that the  source is provided does  NOT  mean that you can use it without  paying a 
+* its use in your product. We provide ALL the source code for your convenience and to help you experience
+* uC/OS-II.   The fact that the  source is provided does  NOT  mean that you can use it without  paying a
 * licensing fee.
 *********************************************************************************************************
 */
@@ -56,7 +56,7 @@ INT8U  const  OSUnMapTbl[256] = {
     4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0        /* 0xF0 to 0xFF                             */
 };
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                       FUNCTION PROTOTYPES
@@ -79,7 +79,7 @@ static  void  OS_InitTCBList(void);
 
 static  void  OS_SchedNew(void);
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                         GET THE NAME OF A SEMAPHORE, MUTEX, MAILBOX or QUEUE
@@ -153,7 +153,7 @@ INT8U  OSEventNameGet (OS_EVENT *pevent, INT8U *pname, INT8U *perr)
 }
 #endif
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                         ASSIGN A NAME TO A SEMAPHORE, MUTEX, MAILBOX or QUEUE
@@ -232,7 +232,7 @@ void  OSEventNameSet (OS_EVENT *pevent, INT8U *pname, INT8U *perr)
 }
 #endif
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                      PEND ON MULTIPLE EVENTS
@@ -270,9 +270,9 @@ void  OSEventNameSet (OS_EVENT *pevent, INT8U *pname, INT8U *perr)
 *                                                'pevents_rdy' array for which events were aborted.
 *                            OS_ERR_TIMEOUT      The events were not received within the specified
 *                                                'timeout'.
-*                            OS_ERR_PEVENT_NULL  If 'pevents_pend', 'pevents_rdy', or 'pmsgs_rdy' is a 
+*                            OS_ERR_PEVENT_NULL  If 'pevents_pend', 'pevents_rdy', or 'pmsgs_rdy' is a
 *                                                NULL pointer.
-*                            OS_ERR_EVENT_TYPE   If you didn't pass a pointer to an array of semaphores, 
+*                            OS_ERR_EVENT_TYPE   If you didn't pass a pointer to an array of semaphores,
 *                                                mailboxes, and/or queues.
 *                            OS_ERR_PEND_ISR     If you called this function from an ISR and the result
 *                                                would lead to a suspension.
@@ -281,7 +281,7 @@ void  OSEventNameSet (OS_EVENT *pevent, INT8U *pname, INT8U *perr)
 * Returns    : >  0          the number of events returned as ready or aborted.
 *              == 0          if no events are returned as ready because of timeout or upon error.
 *
-* Notes      : 1) a. Validate 'pevents_pend' array as valid OS_EVENTs : 
+* Notes      : 1) a. Validate 'pevents_pend' array as valid OS_EVENTs :
 *
 *                        semaphores, mailboxes, queues
 *
@@ -299,11 +299,11 @@ void  OSEventNameSet (OS_EVENT *pevent, INT8U *pname, INT8U *perr)
 *                      else
 *                    Return timeout
 *
-*              2) 'pevents_rdy' initialized to NULL PRIOR to all other validation or function handling in 
+*              2) 'pevents_rdy' initialized to NULL PRIOR to all other validation or function handling in
 *                 case of any error(s).
 *********************************************************************************************************
 */
-/*$PAGE*/
+/*$PAGE*/
 #if ((OS_EVENT_EN) && (OS_EVENT_MULTI_EN > 0))
 INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void **pmsgs_rdy, INT16U timeout, INT8U *perr)
 {
@@ -358,9 +358,9 @@ INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void 
                  break;
 #endif
 
-            case OS_EVENT_TYPE_MUTEX:                                            
+            case OS_EVENT_TYPE_MUTEX:
             case OS_EVENT_TYPE_FLAG:
-            default:           
+            default:
                 *perr = OS_ERR_EVENT_TYPE;
                  return (0);
         }
@@ -377,7 +377,7 @@ INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void 
         return (0);
     }
 
-/*$PAGE*/
+/*$PAGE*/
     OS_ENTER_CRITICAL();
     events_rdy     =  OS_FALSE;
     events_rdy_nbr =  0;
@@ -437,9 +437,9 @@ INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void 
                  break;
 #endif
 
-            case OS_EVENT_TYPE_MUTEX:                                            
+            case OS_EVENT_TYPE_MUTEX:
             case OS_EVENT_TYPE_FLAG:
-            default:           
+            default:
                  OS_EXIT_CRITICAL();
                 *pevents_rdy = (OS_EVENT *)0;           /* NULL terminate return event array           */
                 *perr        =  OS_ERR_EVENT_TYPE;
@@ -455,7 +455,7 @@ INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void 
        *perr        =  OS_ERR_NONE;
         return (events_rdy_nbr);
     }
-/*$PAGE*/
+/*$PAGE*/
                                                         /* Otherwise, must wait until any event occurs */
     OSTCBCur->OSTCBStat     |= events_stat  |           /* Resource not available, ...                 */
                                OS_STAT_MULTI;           /* ... pend on multiple events                 */
@@ -505,9 +505,9 @@ INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void 
                       break;
 #endif
 
-                 case OS_EVENT_TYPE_MUTEX:                                       
+                 case OS_EVENT_TYPE_MUTEX:
                  case OS_EVENT_TYPE_FLAG:
-                 default:           
+                 default:
                       OS_EXIT_CRITICAL();
                      *pevents_rdy = (OS_EVENT *)0;      /* NULL terminate return event array           */
                      *perr        =  OS_ERR_EVENT_TYPE;
@@ -520,9 +520,9 @@ INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void 
             *pmsgs_rdy++ = (void *)0;                   /* NO message returned for abort               */
             *perr        =  OS_ERR_PEND_ABORT;          /* Indicate that event  aborted                */
              break;
-                                                        
-        case OS_STAT_PEND_TO:                                                
-        default:        
+
+        case OS_STAT_PEND_TO:
+        default:
             *pmsgs_rdy++ = (void *)0;                   /* NO message returned for timeout             */
             *perr        =  OS_ERR_TIMEOUT;             /* Indicate that events timed out              */
              break;
@@ -1098,7 +1098,7 @@ void  OS_EventTaskWait (OS_EVENT *pevent)
 * Description: This function is called by other uC/OS-II services to suspend a task because any one of
 *              multiple events has not occurred.
 *
-* Arguments  : pevents_wait     is a pointer to an array of event control blocks, NULL-terminated, for 
+* Arguments  : pevents_wait     is a pointer to an array of event control blocks, NULL-terminated, for
 *                               which the task will be waiting for.
 *
 * Returns    : none.
@@ -1163,7 +1163,7 @@ void  OS_EventTaskRemove (OS_TCB   *ptcb,
     }
 }
 #endif
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                             REMOVE TASK FROM MULTIPLE EVENTS WAIT LISTS
@@ -1210,7 +1210,7 @@ void  OS_EventTaskRemoveMulti (OS_TCB    *ptcb,
     }
 }
 #endif
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                 INITIALIZE EVENT CONTROL BLOCK'S WAIT LIST
@@ -1544,7 +1544,7 @@ static  void  OS_InitTCBList (void)
     OSTCBList               = (OS_TCB *)0;                       /* TCB lists initializations          */
     OSTCBFreeList           = &OSTCBTbl[0];
 }
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                        CLEAR A SECTION OF MEMORY
@@ -1572,7 +1572,7 @@ void  OS_MemClr (INT8U *pdest, INT16U size)
         size--;
     }
 }
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                        COPY A BLOCK OF MEMORY
@@ -1698,7 +1698,7 @@ static  void  OS_SchedNew (void)
 #endif
 }
 
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                        COPY AN ASCII STRING
@@ -1733,7 +1733,7 @@ INT8U  OS_StrCopy (INT8U *pdest, INT8U *psrc)
     return (len);
 }
 #endif
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                DETERMINE THE LENGTH OF AN ASCII STRING
@@ -1859,7 +1859,7 @@ void  OS_TaskStat (void *p_arg)
     }
 }
 #endif
-/*$PAGE*/
+/*$PAGE*/
 /*
 *********************************************************************************************************
 *                                      CHECK ALL TASK STACKS
